@@ -78,6 +78,7 @@ public class NoteService {
                 .title(note.getTitle())
                 .content(note.getContent())
                 .createdAt(note.getCreatedAt())
+                .updatedAt(note.getUpdatedAt())
                 .favorite(note.isFavorite())
                 .build();
     }

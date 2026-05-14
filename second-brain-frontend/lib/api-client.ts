@@ -38,7 +38,7 @@ class ApiClient {
 
           try {
             if (!this.refreshPromise) {
-              this.refreshPromise = this.refreshToken();
+              this.refreshPromise = this.refreshAccessToken();
             }
             const newToken = await this.refreshPromise;
             this.refreshPromise = null;
@@ -46,8 +46,10 @@ class ApiClient {
             originalRequest.headers.Authorization = `Bearer ${newToken}`;
             return this.client(originalRequest);
           } catch (refreshError) {
-            this.clearToken();
-            window.location.href = '/login';
+            this.clearTokens();
+            if (typeof window !== 'undefined') {
+              window.location.href = '/login';
+            }
             return Promise.reject(refreshError);
           }
         }
@@ -57,32 +59,50 @@ class ApiClient {
     );
   }
 
+  // ─── Token helpers ────────────────────────────────────────────────────
   private getToken(): string | null {
+    if (typeof window === 'undefined') return null;
     return Cookies.get('auth_token') || localStorage.getItem('auth_token');
   }
 
-  private setToken(token: string): void {
+  private getRefreshToken(): string | null {
+    if (typeof window === 'undefined') return null;
+    return Cookies.get('refresh_token') || localStorage.getItem('refresh_token');
+  }
+
+  private setTokens(token: string, refreshToken?: string): void {
     Cookies.set('auth_token', token, { expires: 7 });
     localStorage.setItem('auth_token', token);
+    if (refreshToken) {
+      Cookies.set('refresh_token', refreshToken, { expires: 7 });
+      localStorage.setItem('refresh_token', refreshToken);
+    }
   }
 
-  private clearToken(): void {
+  private clearTokens(): void {
     Cookies.remove('auth_token');
+    Cookies.remove('refresh_token');
     localStorage.removeItem('auth_token');
+    localStorage.removeItem('refresh_token');
   }
 
-  private async refreshToken(): Promise<string> {
-    const response = await this.client.post('/auth/refresh');
-    const { token } = response.data;
-    this.setToken(token);
+  // ─── Token refresh ────────────────────────────────────────────────────
+  private async refreshAccessToken(): Promise<string> {
+    const refreshToken = this.getRefreshToken();
+    if (!refreshToken) {
+      throw new Error('No refresh token available');
+    }
+    const response = await this.client.post('/auth/refresh', { refreshToken });
+    const { token, refreshToken: newRefreshToken } = response.data;
+    this.setTokens(token, newRefreshToken);
     return token;
   }
 
-  // Auth endpoints
+  // ─── Auth endpoints ───────────────────────────────────────────────────
   async register(email: string, password: string) {
     const response = await this.client.post('/auth/register', { email, password });
     if (response.data.token) {
-      this.setToken(response.data.token);
+      this.setTokens(response.data.token, response.data.refreshToken);
     }
     return response.data;
   }
@@ -90,46 +110,59 @@ class ApiClient {
   async login(email: string, password: string) {
     const response = await this.client.post('/auth/login', { email, password });
     if (response.data.token) {
-      this.setToken(response.data.token);
+      this.setTokens(response.data.token, response.data.refreshToken);
     }
     return response.data;
   }
 
   async logout() {
     try {
-      await this.client.post('/auth/logout');
+      const refreshToken = this.getRefreshToken();
+      if (refreshToken) {
+        await this.client.post('/auth/logout', { refreshToken });
+      }
     } finally {
-      this.clearToken();
+      this.clearTokens();
     }
   }
 
-  // Notes endpoints
+  // ─── Notes endpoints ──────────────────────────────────────────────────
   async createNote(title: string, content: string) {
-    return this.client.post('/notes', { title, content });
+    const response = await this.client.post('/notes', { title, content });
+    return response;
   }
 
   async getNotes() {
-    return this.client.get('/notes');
+    const response = await this.client.get('/notes');
+    return response;
   }
 
-  async updateNote(noteId: string, title: string, content: string) {
-    return this.client.put(`/notes/${noteId}`, { title, content });
+  async updateNote(noteId: string | number, title: string, content: string) {
+    const response = await this.client.put(`/notes/${noteId}`, { title, content });
+    return response;
   }
 
-  async deleteNote(noteId: string) {
-    return this.client.delete(`/notes/${noteId}`);
+  async deleteNote(noteId: string | number) {
+    const response = await this.client.delete(`/notes/${noteId}`);
+    return response;
   }
 
-  // File endpoints
-  async uploadFile(noteId: string, file: File) {
+  // ─── File endpoints ───────────────────────────────────────────────────
+  async uploadFile(file: File, noteId?: number | string | null) {
     const formData = new FormData();
     formData.append('file', file);
-    formData.append('noteId', noteId);
+
+    // noteId is a query parameter, not a form field
+    const params: Record<string, any> = {};
+    if (noteId && noteId !== 'default') {
+      params.noteId = noteId;
+    }
 
     return this.client.post('/files/upload', formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
+      params,
     });
   }
 
@@ -137,11 +170,12 @@ class ApiClient {
     return this.client.get('/files');
   }
 
-  async getNoteFiles(noteId: string) {
-    return this.client.get(`/files/notes/${noteId}`);
+  async getNoteFiles(noteId: string | number) {
+    // Backend path is /files/note/{noteId}  (singular "note")
+    return this.client.get(`/files/note/${noteId}`);
   }
 
-  async deleteFile(fileId: string) {
+  async deleteFile(fileId: string | number) {
     return this.client.delete(`/files/${fileId}`);
   }
 

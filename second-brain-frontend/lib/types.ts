@@ -1,5 +1,6 @@
 /**
  * Type definitions for Second Brain API responses and requests
+ * These types match the backend DTO classes exactly.
  */
 
 // Auth Types
@@ -13,11 +14,14 @@ export interface RegisterRequest {
   password: string;
 }
 
+// Matches backend AuthResponse.java
 export interface AuthResponse {
-  token: string;
-  userId: string;
-  id?: string;
+  id: number;
+  name: string;
   email: string;
+  role: string;
+  token: string;
+  refreshToken: string;
 }
 
 export interface User {
@@ -25,52 +29,37 @@ export interface User {
   email: string;
 }
 
-// Notes Types
+// Notes Types — matches backend NoteResponse.java
 export interface Note {
-  id: string;
+  id: number;
   title: string;
   content: string;
   createdAt: string;
   updatedAt: string;
+  favorite: boolean;
 }
 
 export interface CreateNoteRequest {
   title: string;
   content: string;
+  favorite?: boolean;
 }
 
 export interface UpdateNoteRequest {
   title: string;
   content: string;
+  favorite?: boolean;
 }
 
-export interface NotesResponse {
-  data: Note[];
-  message?: string;
-}
-
-// Files Types
+// Files Types — matches backend FileAttachmentResponse.java
 export interface FileData {
-  id: string;
-  fileName: string;
+  id: number;
+  originalName: string;
+  publicUrl: string;
+  contentType: string;
   fileSize: number;
-  fileType: string;
-  noteId?: string;
-  createdAt: string;
-  uploadedAt?: string;
-}
-
-export interface FilesResponse {
-  data: FileData[];
-  message?: string;
-}
-
-export interface FileUploadResponse {
-  id: string;
-  fileName: string;
-  fileSize: number;
-  fileType: string;
-  message?: string;
+  noteId?: number;
+  uploadedAt: string;
 }
 
 // API Error Type

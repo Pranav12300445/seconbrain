@@ -32,6 +32,9 @@ public class Note {
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
+    @Column(name = "updated_at")
+    private LocalDateTime updatedAt;
+
     @Column(nullable = false)
     private boolean favorite;
 
@@ -45,8 +48,17 @@ public class Note {
 
     @PrePersist
     void prePersist() {
+        LocalDateTime now = LocalDateTime.now();
         if (createdAt == null) {
-            createdAt = LocalDateTime.now();
+            createdAt = now;
         }
+        if (updatedAt == null) {
+            updatedAt = now;
+        }
+    }
+
+    @PreUpdate
+    void preUpdate() {
+        updatedAt = LocalDateTime.now();
     }
 }

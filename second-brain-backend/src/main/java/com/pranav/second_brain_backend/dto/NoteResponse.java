@@ -14,5 +14,7 @@ public class NoteResponse {
     private String title;
     private String content;
     private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
     private boolean favorite;
 }
+

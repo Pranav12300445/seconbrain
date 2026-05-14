@@ -13,12 +13,12 @@ import { Input } from '@/components/ui/input';
 
 interface FileData {
   id: string;
-  fileName: string;
+  originalName: string;
+  publicUrl: string;
+  contentType: string;
   fileSize: number;
-  fileType: string;
   noteId?: string;
-  createdAt: string;
-  uploadedAt?: string;
+  uploadedAt: string;
 }
 
 export default function FilesPage() {
@@ -41,7 +41,7 @@ export default function FilesPage() {
 
   useEffect(() => {
     const filtered = files.filter((file) =>
-      file.fileName.toLowerCase().includes(searchQuery.toLowerCase())
+      file.originalName.toLowerCase().includes(searchQuery.toLowerCase())
     );
     setFilteredFiles(filtered);
   }, [files, searchQuery]);
@@ -49,7 +49,8 @@ export default function FilesPage() {
   const loadFiles = async () => {
     try {
       const response = await apiClient.getFiles();
-      setFiles(response.data.data || response.data || []);
+      const data = response.data;
+      setFiles(Array.isArray(data) ? data : (data.data || []));
     } catch (error: any) {
       console.log('[v0] Error loading files:', error);
       toast.error('Failed to load files');
@@ -68,12 +69,8 @@ export default function FilesPage() {
   const handleUploadFile = async (file: File) => {
     setIsUploading(true);
     try {
-      // In a real app, you would select a note or use a default note
-      // For now, we'll upload without a specific note
-      const formData = new FormData();
-      formData.append('file', file);
-
-      await apiClient.uploadFile('default', file);
+      // Upload without linking to a specific note
+      await apiClient.uploadFile(file);
       toast.success(`File "${file.name}" uploaded successfully`);
       loadFiles();
     } catch (error: any) {
@@ -120,14 +117,15 @@ export default function FilesPage() {
     }
   };
 
-  const getFileIcon = (fileType: string) => {
-    if (fileType.startsWith('image/')) {
+  const getFileIcon = (contentType: string) => {
+    if (!contentType) return '📦';
+    if (contentType.startsWith('image/')) {
       return '🖼️';
-    } else if (fileType.includes('pdf')) {
+    } else if (contentType.includes('pdf')) {
       return '📄';
-    } else if (fileType.includes('word') || fileType.includes('document')) {
+    } else if (contentType.includes('word') || contentType.includes('document')) {
       return '📝';
-    } else if (fileType.includes('sheet') || fileType.includes('excel')) {
+    } else if (contentType.includes('sheet') || contentType.includes('excel')) {
       return '📊';
     } else {
       return '📦';
@@ -191,15 +189,15 @@ export default function FilesPage() {
                   <CardHeader>
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
-                        <div className="text-3xl mb-2">{getFileIcon(file.fileType)}</div>
-                        <CardTitle className="text-lg text-white truncate">{file.fileName}</CardTitle>
+                        <div className="text-3xl mb-2">{getFileIcon(file.contentType)}</div>
+                        <CardTitle className="text-lg text-white truncate">{file.originalName}</CardTitle>
                         <CardDescription className="mt-1">{formatFileSize(file.fileSize)}</CardDescription>
                       </div>
                     </div>
                   </CardHeader>
                   <CardContent>
                     <p className="text-xs text-gray-500 mb-4">
-                      Uploaded: {formatDate(file.createdAt || file.uploadedAt || '')}
+                      Uploaded: {formatDate(file.uploadedAt || '')}
                     </p>
                     <div className="flex gap-2">
                       <Button

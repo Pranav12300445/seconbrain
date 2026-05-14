@@ -55,7 +55,8 @@ export default function NotesPage() {
   const loadNotes = async () => {
     try {
       const response = await apiClient.getNotes();
-      setNotes(response.data.data || response.data || []);
+      const data = response.data;
+      setNotes(Array.isArray(data) ? data : (data.data || []));
     } catch (error: any) {
       console.log('[v0] Error loading notes:', error);
       toast.error('Failed to load notes');
