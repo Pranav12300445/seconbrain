@@ -32,6 +32,7 @@ public class SecurityConfig {
                         // 🔐 role-based routes
                         .requestMatchers("/admin/**").hasRole("ADMIN")
                         .requestMatchers("/user/**").hasAnyRole("USER", "ADMIN")
+
                         .requestMatchers("/files/public/**").permitAll()
 
                         // everything else
