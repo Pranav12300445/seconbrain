@@ -12,6 +12,7 @@ import { toast } from 'sonner';
 import { Brain } from 'lucide-react';
 
 export default function RegisterPage() {
+  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -35,7 +36,7 @@ export default function RegisterPage() {
     setIsLoading(true);
 
     try {
-      const response = await apiClient.register(email, password);
+      const response = await apiClient.register(name, email, password);
       setUser({
         id: response.userId || response.id,
         email: response.email,
@@ -68,6 +69,18 @@ export default function RegisterPage() {
           </CardHeader>
           <CardContent>
             <form onSubmit={handleRegister} className="space-y-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-200">Name</label>
+                <Input
+                  type="text"
+                  placeholder="John Doe"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  disabled={isLoading}
+                  className="border-slate-600 bg-slate-700/50 text-white placeholder:text-gray-400"
+                  required
+                />
+              </div>
               <div className="space-y-2">
                 <label className="text-sm font-medium text-gray-200">Email</label>
                 <Input

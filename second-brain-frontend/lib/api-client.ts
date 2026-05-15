@@ -99,8 +99,8 @@ class ApiClient {
   }
 
   // ─── Auth endpoints ───────────────────────────────────────────────────
-  async register(email: string, password: string) {
-    const response = await this.client.post('/auth/register', { email, password });
+  async register(name: string, email: string, password: string) {
+    const response = await this.client.post('/auth/register', { name, email, password });
     if (response.data.token) {
       this.setTokens(response.data.token, response.data.refreshToken);
     }
