@@ -33,7 +33,9 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 
                 .authorizeHttpRequests(auth -> auth
-                        // public APIs
+                        // /auth/me requires a valid token
+                        .requestMatchers("/auth/me").authenticated()
+                        // other auth endpoints are public
                         .requestMatchers("/auth/**").permitAll()
 
                         // 🔐 role-based routes

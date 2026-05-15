@@ -4,11 +4,15 @@ import com.pranav.second_brain_backend.dto.AuthResponse;
 import com.pranav.second_brain_backend.dto.LoginRequest;
 import com.pranav.second_brain_backend.dto.LogoutRequest;
 import com.pranav.second_brain_backend.model.User;
+import com.pranav.second_brain_backend.repository.UserRepository;
 import com.pranav.second_brain_backend.service.AuthService;
 
 import jakarta.validation.Valid;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -18,6 +22,9 @@ public class AuthController {
 
     @Autowired
     private AuthService authService;
+
+    @Autowired
+    private UserRepository userRepository;
 
     @PostMapping("/register")
     public AuthResponse register(@RequestBody User user) {
@@ -40,4 +47,22 @@ public class AuthController {
         authService.logout(request.getRefreshToken());
         return "Logged out successfully";
     }
-}
+
+    @GetMapping("/me")
+    public ResponseEntity<?> getCurrentUser() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || !auth.isAuthenticated() || "anonymousUser".equals(auth.getPrincipal())) {
+            return ResponseEntity.status(401).body("Not authenticated");
+        }
+
+        String email = auth.getName();
+        return userRepository.findByEmail(email)
+                .<ResponseEntity<?>>map(user -> ResponseEntity.ok(AuthResponse.builder()
+                        .id(user.getId())
+                        .name(user.getName())
+                        .email(user.getEmail())
+                        .role(user.getRole().name())
+                        .build()))
+                .orElse(ResponseEntity.status(401).body("User not found"));
+    }
+}

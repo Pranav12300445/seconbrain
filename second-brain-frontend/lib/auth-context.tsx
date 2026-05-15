@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import Cookies from 'js-cookie';
+import { apiClient } from '@/lib/api-client';
 
 interface User {
   id: string;
@@ -24,20 +25,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Check if user is already authenticated on mount
-    const token = Cookies.get('auth_token') || localStorage.getItem('auth_token');
-    if (token) {
-      // In a real app, verify token with backend
-      const storedUser = localStorage.getItem('user');
-      if (storedUser) {
-        try {
-          setUser(JSON.parse(storedUser));
-        } catch {
-          setUser(null);
-        }
+    const verifyAuth = async () => {
+      const token = Cookies.get('auth_token') || localStorage.getItem('auth_token');
+      if (!token) {
+        setLoading(false);
+        return;
       }
-    }
-    setLoading(false);
+
+      try {
+        // Validate token against the backend
+        const userData = await apiClient.getMe();
+        setUser({
+          id: userData.id,
+          email: userData.email,
+        });
+        localStorage.setItem('user', JSON.stringify({ id: userData.id, email: userData.email }));
+      } catch {
+        // Token is invalid or user no longer exists — clear everything
+        Cookies.remove('auth_token');
+        Cookies.remove('refresh_token');
+        localStorage.removeItem('auth_token');
+        localStorage.removeItem('refresh_token');
+        localStorage.removeItem('user');
+        setUser(null);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    verifyAuth();
   }, []);
 
   const handleSetUser = (newUser: User | null) => {

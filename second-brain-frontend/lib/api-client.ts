@@ -32,8 +32,12 @@ class ApiClient {
       (response) => response,
       async (error: AxiosError) => {
         const originalRequest = error.config as any;
+        const requestUrl = originalRequest?.url || '';
 
-        if (error.response?.status === 401 && !originalRequest._retry) {
+        // Don't retry auth-verification endpoints to avoid infinite loops
+        const isAuthEndpoint = requestUrl.includes('/auth/me') || requestUrl.includes('/auth/refresh');
+
+        if (error.response?.status === 401 && !originalRequest._retry && !isAuthEndpoint) {
           originalRequest._retry = true;
 
           try {
@@ -47,9 +51,6 @@ class ApiClient {
             return this.client(originalRequest);
           } catch (refreshError) {
             this.clearTokens();
-            if (typeof window !== 'undefined') {
-              window.location.href = '/login';
-            }
             return Promise.reject(refreshError);
           }
         }
@@ -112,6 +113,11 @@ class ApiClient {
     if (response.data.token) {
       this.setTokens(response.data.token, response.data.refreshToken);
     }
+    return response.data;
+  }
+
+  async getMe() {
+    const response = await this.client.get('/auth/me');
     return response.data;
   }
 
